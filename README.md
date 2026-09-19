@@ -9,11 +9,12 @@ Falcon AI Agent 黑客松 · MakerMuse 场景赛道
 
 ## 评审入口
 
+- [按比赛字段查看完整材料索引](docs/参赛材料索引.md)
 - **[直接打开在线体验版](https://davidpengrj.github.io/memory-workshop/)**：无需登录，可切换示例、调整作品、查看三维、排版与下载。自定义 AI 故事请使用本地版，详见[两种体验方式](docs/在线体验与本地运行.md)。
-- [下载 v2.1 源码与完整材料](https://github.com/davidpengrj/memory-workshop/releases/tag/v2.1.0)
-- [演示视频 · 3 分 25 秒](https://github.com/davidpengrj/memory-workshop/releases/download/v2.1.0/memory-workshop-demo.mp4)
-- [作品说明 PDF](https://github.com/davidpengrj/memory-workshop/releases/download/v2.1.0/memory-workshop-introduction.pdf)
-- [开发过程记录 · 单个 Markdown](https://github.com/davidpengrj/memory-workshop/releases/download/v2.1.0/memory-workshop-development.md)
+- [下载 v2.1.1 源码与完整材料](https://github.com/davidpengrj/memory-workshop/releases/tag/v2.1.1)
+- [演示视频 · 3 分 25 秒](https://github.com/davidpengrj/memory-workshop/releases/download/v2.1.1/memory-workshop-demo.mp4)
+- [作品说明 PDF](https://github.com/davidpengrj/memory-workshop/releases/download/v2.1.1/memory-workshop-introduction.pdf)
+- [开发过程记录 · 单个 Markdown](https://github.com/davidpengrj/memory-workshop/releases/download/v2.1.1/memory-workshop-development.md)
 
 ![拾光工坊生产工作台](docs/assets/production-workbench.png)
 

@@ -11,7 +11,7 @@ import './production.css';
 import './style.css';
 
 const ONLINE_DEMO=import.meta.env.MODE==='demo';
-const LOCAL_DOWNLOAD='https://github.com/davidpengrj/memory-workshop/releases/tag/v2.1.0';
+const LOCAL_DOWNLOAD='https://github.com/davidpengrj/memory-workshop/releases/tag/v2.1.1';
 
 function LayerArt({layer,all=false,design}){
   return <svg viewBox="-4 -4 208 208" aria-hidden="true">{all?[...design.layers].reverse().map(l=><path key={l.id} d={l.path} fill={l.color} fillRule="evenodd"/>):<path d={layer.path} fill={layer.id===0?'#d8bd98':layer.color} fillRule="evenodd"/>}</svg>;
