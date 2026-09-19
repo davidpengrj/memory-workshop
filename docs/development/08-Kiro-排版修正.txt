@@ -1,0 +1,145 @@
+I will read the contract file and the assigned files before making changes.
+[tool] Finding **/*.md in .kiro
+
+[tool] Reading packing.js:1, packing.test.mjs:1
+[tool] status: Completed
+[tool] status: Completed
+Now I understand the code. Let me analyze the issues carefully.
+
+Let me first understand the free-space/gap issue with a concrete example. The instruction says a 180mm square SHOULD fit a 188mm board with margin4 and gap3.
+
+With current code:
+- usableW = min(188, bed) - 2*4 = 180
+- part footprint = 180 + gap = 183
+- findPosition requires free rect (180 wide) >= 183 → fails.
+
+The problem: the code inflates every part's footprint by a full `gap` on width and height. But at the board edge, no gap is needed after the last piece. The gap only matters *between* parts.
+
+The fix: reserve gap only between parts. A clean way: keep footprint including trailing gap for the free-space bookkeeping (so subsequent parts are separated), but allow the footprint to extend into the "trailing gap" region up to the board edge. In other words, the *actual part bounds* (w×h, no gap) must fit within usable extents; the gap is a separation allowance between neighbors.
+
+Let me think of an implementation that preserves the API and the deterministic MaxRects structure while being simple. 
+
+Approach: When searching/placing, use the part's actual size `w×h` to test fit against free rects, but the *placed used region* for splitting free space should be `(w+gap)×(h+gap)` clamped to the free rect. Actually the cleanest correct approach:
+
+- A part occupies actual bounds `w×h` at (x,y).
+- To guarantee separation, the free space consumed is `w×h` plus a gap strip on the right and bottom. But if the part touches the board edge (right/bottom of usable area), the trailing gap can be omitted because there's no neighbor.
+
+Let me redefine: free rectangles represent available space where a part's *top-left corner* region can be placed such that the part fits. The simplest robust method used in practice: inflate the free working area itself by `gap` on the right and bottom (allow a trailing gap allowance beyond usable extents), and require part footprint = (w+gap)×(h+gap). This way a part of actual size w that ends at the board edge is allowed because its trailing gap extends into the allowance region beyond the usable extent (which doesn't physically exist, so it's fine — no neighbor there).
+
+Let me verify: usable area x∈[margin, margin+usableW]. Extend free rect width by gap → working width = usableW + gap. Part footprint width = w + gap. Fits if w+gap <= usableW+gap → w <= usableW. For 180 <= 180 ✓. And the actual part bounds end at margin + w = 4+180 = 184 <= 188-4 = 184 ✓ (within margin). 
+
+Then I must verify actual part bounds stay within usable (not the extended region). Since footprint = w+gap and free extended by gap, the part's actual right edge = x + w. The x can be as large as (margin + usableW + gap) - (w+gap) = margin + usableW - w. So x+w <= margin+usableW = board edge minus margin. Good — actual bounds always within margin. 
+
+This is the "trailing gap allowance" the instruction describes: free working extents include a trailing gap, but verify actual part bounds.
+
+Let me implement this. I'll extend the initial free rect by `gap` in both width and height (the trailing allowance), keep footprint = (w+gap)×(h+gap). The `place` splitting works on footprint within the extended free space. Placement records actual x,y,w,h (unchanged). The boundary check in tests uses actual bounds.
+
+Now let me also check the strips regression scenario and rings incompleteness. Let me implement the packing.js changes first.
+[tool] Editing packing.js
+[tool] status: Completed
+Now the free rectangle carries a trailing gap allowance. The rest of the code (findPosition, place with footW=w+gap) works unchanged and is correct: the part's actual bounds x+w stay within margin because the effective usable extent for actual size is preserved.
+
+Let me verify the `attemptOnSheet` still records actual bounds correctly — yes, it records `placeW = w`, `placeH = h`, unchanged. Good.
+
+Now let me update the test file. First fix the fixtures with mismatched boards, strengthen `assertSheetValid`, fix the strip-area assertion and comment, add the two regressions, and add the scenario regression.
+[tool] Editing packing.test.mjs
+[tool] status: Completed
+Now the strips test. The instruction says: assert actual one-frame strip area equals outer-minus-inner frame area (not only positive), and correct the comment about short strips ("two strip widths shorter").
+
+Let me examine the geometry. longW = size, shortW = size*0.9, stripH = size*0.05. Frame: outer size, inner size*0.9. The ring band area = size² - (size*0.9)². 
+
+One frame's strip area (two longs + two shorts) = 2*size*stripH + 2*(size*0.9)*stripH.
+
+Let me check if these are equal for size=180: stripH=9.
+- band = 180² - 162² = 32400 - 26244 = 6156
+- strips = 2*180*9 + 2*162*9 = 3240 + 2916 = 6156 ✓
+
+They're equal. Good — the assertion can be exact. Note this equality holds because inner = size - 2*stripH = 180-18 = 162 = size*0.9 exactly when stripH = size*0.05. And shortW = size*0.9 = inner width. Let me fix the comment: "short strips are two strip widths shorter than long strips" — i.e. shortW = size - 2*stripH.
+[tool] Editing packing.test.mjs
+[tool] status: Completed
+Now fix the three fixtures with mismatched boards. Board 600x400 with default bed 400x415: 600 wide > 400, rotated 400x600? 600 > 415 → rejected. So those fixtures were being rejected by bed. I need to give explicit matching custom bed dims.
+
+Fixtures using 600x400: the "充足库存" test and "优先使用余料板" test. Fixtures using 500x500: the "margin 与 gap" test, "确定性" test, and "stats.utilization" test.
+
+Let me fix them by adding explicit bed dimensions that fit the boards.
+[tool] Editing packing.test.mjs
+[tool] status: Completed
+
+[tool] Editing packing.test.mjs
+[tool] status: Completed
+Now the 500x500 fixtures. Three of them: margin/gap test, determinism test, utilization test.
+[tool] Editing packing.test.mjs
+[tool] status: Completed
+
+[tool] Editing packing.test.mjs
+[tool] status: Completed
+
+[tool] Editing packing.test.mjs
+[tool] status: Completed
+Now the stock-insufficiency fixture. Currently 460x460 with default bed 400x415: 460>400 and rotated 460>415 → rejected by bed, making it vacuous (unplaced from no usable board, not from insufficiency). I need it to actually fit the bed but not fit all parts.
+
+Parts: makeParts(220, 2, 'rings') = 22 parts of 220×220. On a board that fits the bed but can't hold all 22. Let me pick a board and bed. A 460×460 board with a matching bed 460×460 would fit the bed. Can it hold all 22 pieces of 220×220 (footprint 223×223 with gap3, margin4)? Usable = 460-8 = 452, plus trailing gap = 455 working. Each 220 footprint 223. 452/223 = 2 per row/col → 2×2 = 4 pieces per sheet. count=1 → only 4 placed, 18 unplaced. That's genuine insufficiency.
+
+Let me update the fixture with a matching bed.
+[tool] Editing packing.test.mjs
+[tool] status: Completed
+Now add the two boundary regressions and the scenario regression. First the trailing-gap regression: 180mm square fits a 188mm board with margin4, gap3.
+
+Board 188×188, bed must fit it. Default bed 400×415 fits 188×188. margin4 gap3. Let me verify: usableW = 188-8 = 180, working = 180+3 = 183. footprint 180+3 = 183 <= 183 ✓. Placed x=4, x+w = 184 <= 188-4=184 ✓.
+
+Let me add both regressions and the scenario at the end of the file.
+[tool] Reading packing.test.mjs:231-270
+[tool] status: Completed
+Now let me work out the scenario regression precisely: inventory four 300×80 reclaimed + four 300×400 new, size180 quantity1, bed400×415 margin4 gap3.
+
+Parts for size180 quantity1:
+- rings: 6 layers 180×180 + 5 spacers 180×180 = 11 parts, all 180×180.
+- strips: 6 layers 180×180 + 20 strips (10 long 180×9, 10 short 162×9) = 26 parts.
+
+Stocks:
+- reclaimed: 300×80, count 4. On bed 400×415: normal (300≤400, 80≤415) ✓. usableW=300-8=292 (+3=295 working), usableH=80-8=72 (+3=75 working).
+- new: 300×400, count 4. usableW=292(+3), usableH=392(+3).
+
+Rings expectation: "rings incomplete". Layers/spacers are 180×180, footprint 183×183. On reclaimed 300×80: usable height 72 < 180, rotated part still 180 > 72 → can't fit any 180 square on the 80-tall reclaimed strip. On new 300×400: 183 fits width 295, and 183 in height 395. Per new sheet: 1 across width (2*183=366 > 295, so only 1 column), and 395/183 = 2 rows → 2 pieces per new sheet. 4 new sheets → 8 pieces max. But 11 rings pieces needed → incomplete (unplaced > 0). Reclaimed can't take 180 squares. So rings incomplete. ✓
+
+Strips expectation: "strips complete with 3 new sheets". Let me check. Strips parts: 6 layers 180×180, 10 long 180×9, 10 short 162×9.
+- Layers 180×180: only fit new sheets (reclaimed too short at 80). 
+- Long strips 180×9 and short 162×9: can fit reclaimed 300×80. usable 292×72. 180×9 footprint 183×12. Multiple rows: 72/12 = 6 rows, 295/183 = 1 col → wait width footprint 183, usable working width 295 → floor(295/183)=1 col. Hmm only 1 per row width-wise. But could pack short 162 too. Rows of height 12 → 75/12 = 6 rows. So a reclaimed sheet holds 6 strips of ~180-wide. 20 strips → 4 reclaimed sheets hold ~24 → all 20 strips could go to reclaimed (4 reclaimed available).
+
+Let me not over-compute the exact algorithm result by hand—it's a MaxRects heuristic. The instruction states the expected outcome: strips complete with 3 new sheets. The 6 layers (180×180) need new sheets: 2 per new sheet → 3 new sheets hold 6 layers. The 20 strips go on the 4 reclaimed sheets. Total new = 3. That matches "3 new sheets."
+
+Rather than assert the exact hand-computed number and risk being wrong about the heuristic, the instruction explicitly asks me to assert: rings incomplete, strips complete with 3 new sheets. I'll assert those. But I must not claim tests pass—parent runs them. Let me write the assertions as specified. If the heuristic differs, parent will report. But the instruction is explicit about expected results, so I'll encode exactly that.
+
+Let me add the three tests.
+[tool] Editing packing.test.mjs
+[tool] status: Completed
+Now let me re-check my packing.js change against the existing "旋转较窄板" test to ensure I didn't break it. That test: board 60×350, part 300×20, margin4 gap3. usableW = 60-8 = 52, usableH = 350-8 = 342. free = {52+3=55 wide, 342+3=345 tall}. Rotated footprint = 20+3=23 wide, 300+3=303 tall. 23<=55 ✓, 303<=345 ✓. Actual part 20×300, x=4, x+20=24 <= 60-4=56 ✓, y=4, y+300=304 <= 350-4=346 ✓. Good.
+
+Now verify the "整张板超床可旋转" test: board 410×300, bed 400×415, part 100×100. Rotated board → w=300, h=410. usableW=300-8=292, usableH=410-8=402. free 295×405. footprint 103×103 fits. ✓
+
+Let me double-check there are no other usages of `this.usableW`/`this.usableH` I need — I added them but they aren't strictly required. They're harmless documentation fields. Let me verify the file is consistent by re-reading the modified Sheet constructor and confirming no leftover reference issues.
+[tool] Reading packing.js:159-188
+[tool] status: Completed
+The changes are coherent. Let me review my determinism-test concern: I changed `deepEqual(a, b)` — since I run the same options twice, it stays deterministic. Fine.
+
+One more concern about the strips scenario `newSheetCount === 3`: this depends on the exact heuristic behavior which I computed by hand as a plausible outcome but cannot run. The instruction explicitly specified this expected result, so I encode it as specified. Parent runs the tests to confirm.
+
+Let me also double check the `partArea` clamp in `place`: no change there. And confirm I preserved the public API (`makeParts`, `packParts` signatures and return shapes) — yes, unchanged.
+
+Summary of what I did, in my two owned files only.
+
+Files changed:
+- `src/packing.js`: Fixed the trailing-gap boundary issue. The `Sheet` free rectangle now includes a trailing `gap` allowance on the right and bottom (`usableW + gap`, `usableH + gap`), while part footprints stay `(w+gap)×(h+gap)`. This keeps full gap separation *between* parts but no longer wastes a gap after the last part at the board edge, so a 180 mm square fits a 188 mm board at margin 4 / gap 3. Actual part bounds still fall within margin because `(w+gap) ≤ usableW+gap ⇒ w ≤ usableW`. Added `this.usableW/usableH` documentation fields. Public API unchanged.
+- `tests/packing.test.mjs`:
+  - Gave explicit matching custom bed dimensions to the fixtures that used 600×400 boards (`bedWidth:600, bedHeight:400`) and 500×500 boards (`bedWidth:500, bedHeight:500`), which the default 400×415 bed rejected.
+  - Reworked the stock-insufficiency fixture (460×460, count 1) with a matching 460×460 bed so the board is not bed-rejected; it now genuinely fits the bed but cannot hold all 22 parts. Added an assertion that `rejectedStocks` is empty so the test is no longer vacuous.
+  - Strengthened `assertSheetValid` to inflate both rectangles by `gap/2` (full-gap separation) instead of only one.
+  - Made the one-frame strip-area check assert exact equality with the outer-minus-inner ring band area, and corrected the short-strip comment (short strip = `size − 2·stripH = size·0.9`, i.e. two strip widths shorter).
+  - Added a regression for the trailing-gap boundary (180 mm square into 188 mm board).
+  - Added a regression asserting real geometric separation between neighbors is at least a full `gap`.
+  - Added the requested scenario regression (four 300×80 reclaimed + four 300×400 new, size 180 qty 1, bed 400×415, margin 4, gap 3): rings incomplete (unplaced > 0), strips complete with `newSheetCount === 3`.
+
+Limitations:
+- I did not run the tests. The parent runs them. I verified the affected fit arithmetic by hand for the boundary regression and the pre-existing rotation tests, but the scenario regression's `newSheetCount === 3` and the strips-complete outcome depend on the MaxRects heuristic's exact placement; I encoded the expected results as specified in the instruction rather than from a run.
+- I touched only `src/packing.js` and `tests/packing.test.mjs`; no other files.
+- No physical/cut verification; geometry-only.

@@ -1,0 +1,2 @@
+PASS 拾光工坊-升级版生产示例.zip: source=example, 26 parts, no unplaced parts, 1 stand with 31.4 mm slot; SVG XML, STL and archive integrity validated
+PASS 拾光工坊-AI演示生产包.zip: source=kiro, 26 parts, no unplaced parts, 1 stand with 31.4 mm slot; SVG XML, STL and archive integrity validated

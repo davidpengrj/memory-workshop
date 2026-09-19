@@ -1,0 +1,2 @@
+PASS final video: 205.47 seconds, 1600x1000, H.264 + AAC, full decode produced no errors.
+Nine chapter frame samples visually checked. Source footage includes a real uncached Kiro call; operation/waiting clips edited or accelerated; system synthesized voice.

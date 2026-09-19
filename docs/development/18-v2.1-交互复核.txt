@@ -1,0 +1,1 @@
+PASS manual choice is identified, previous download status clears, refreshed state matches, latest desktop/mobile screenshots captured

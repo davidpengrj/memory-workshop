@@ -1,0 +1,6 @@
+node_modules/
+# dist is intentionally included for the hackathon's no-install local demo.
+.DS_Store
+*.log
+.env
+.env.*

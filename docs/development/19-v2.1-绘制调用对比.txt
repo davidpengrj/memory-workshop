@@ -1,0 +1,11 @@
+环境：Headless Chrome，SwiftShader，1440 × 1050。每次统计区间为 2.5 秒；后测先等待初始过渡完成。计数为 WebGL drawElements/drawArrays 调用，不是帧率、耗电或整机性能指标。
+
+优化前：
+STORY_IDLE_DRAWS 1300
+OFFSCREEN_STAND_DRAWS 150
+
+优化后：
+STORY_IDLE_DRAWS 0
+OFFSCREEN_STAND_DRAWS 0
+
+交互后仍可恢复绘制，展开、拖动、复位、灯光及单层选择均验证。

@@ -1,0 +1,140 @@
+I'll start by reading CONTRACT.md to understand my assignment and boundaries.[tool] status: Failed
+
+[tool] Finding **/CONTRACT.md
+[tool] status: Completed
+
+[tool] Reading CONTRACT.md:1, listing memory-theatre
+[tool] status: Completed
+My files are: `server/**`, `tests/server.test.mjs`, `tests/planner.test.mjs`. Let me read all of them.
+[tool] Reading index.mjs:1, plan.mjs:1, server.test.mjs:1, planner.test.mjs:1
+[tool] status: Completed
+Now I understand the current state. Let me address each requirement from the user message. The issues to fix:
+
+1. **Request close may fire on body finish, before model finishes** — Currently `req.on('close', onClose)` aborts. Should monitor `res` close and only abort when `!res.writableEnded`.
+2. **Test real client disconnect and non-aborted normal requests with a signal-aware delayed planner**.
+3. **Drain stderr bounded** so child cannot block; **strip ANSI before JSON extraction**.
+4. **JSON extractor should skip irrelevant malformed brace spans** to find valid JSON.
+5. **Same-origin guard should reject mismatched origin ports on same host** as well as external origins, with a test. No Vite cross-port allowance.
+6. **Static test must remain valid after dist exists** — use containment assertion, inject fixture directory if needed.
+
+Let me start with `server/index.mjs` — the abort-on-close fix and origin guard.
+[tool] Editing index.mjs
+[tool] status: Completed
+Note: `localhost` and `127.0.0.1` are different string hosts but the tests use the same `url` for both origin and host, so exact match works. Now fix the abort-on-close: monitor `res` close instead of `req` close.
+[tool] Editing index.mjs
+[tool] status: Completed
+Now `server/plan.mjs`: strip ANSI before JSON extraction, skip malformed brace spans, and drain stderr bounded.
+
+First, the JSON extractor. Currently `scanBalancedObject` finds only the first `{...}` span and if that JSON.parse fails, it gives up on that candidate. It should skip malformed brace spans and continue scanning for the next valid JSON object.
+[tool] Editing plan.mjs
+[tool] status: Completed
+Now update `scanBalancedObject` to accept a start offset and return `{text, start}`.
+[tool] Editing plan.mjs
+[tool] status: Completed
+There's a subtle bug: when a span is unbalanced (returns `text.slice(start)` reaching end), `JSON.parse` fails and we resume at `start + 1`. But if that unbalanced span consumes the rest of the text, the next `indexOf('{', start+1)` could still find nested braces. That's fine — it terminates because `from` always advances. Good.
+
+Now drain stderr bounded in `defaultPlanner`. Currently stderr is piped but never read, which can cause the child to block if its stderr buffer fills.
+[tool] Editing plan.mjs
+[tool] status: Completed
+The stderr `data` handler always consumes chunks (draining the pipe) regardless of the cap, which is what matters for unblocking the child. Good.
+
+Now let me add/update the tests. First `tests/planner.test.mjs` — add tests for ANSI stripping and skipping malformed brace spans.
+[tool] Editing planner.test.mjs
+[tool] status: Completed
+Wait — in the malformed span test, the second span `{"broken": ` is unbalanced and reaches to end of string, consuming `{"seed": 11...}`. Since it's unbalanced it returns `text.slice(start)` which fails JSON.parse, then resumes at `start+1`. The next `indexOf('{')` from there finds `{"seed": 11, "ok": true}` — but wait, `text.slice(start)` for `{"broken":` starts at that `{` and includes everything after, including the seed object. When we resume at `start+1` (just past `{"broken`'s brace), the next `{` found is the seed object's brace, which is balanced. Good, it works.
+
+Now `tests/server.test.mjs`. Need to:
+1. Add same-origin port mismatch rejection test.
+2. Add real client disconnect test with signal-aware delayed planner.
+3. Add non-aborted normal request test with delayed planner.
+4. Fix the static test to remain valid after dist exists (containment assertion / injected fixture dir).
+
+Let me check `createServer` — does it support injecting a dist directory? Currently `DIST_DIR` is module-level constant. For the static test to use an injected fixture, I'd need `createServer` to accept a `distDir` option. But that changes server behavior. Let me look at how static resolution works — it uses module-level `DIST_DIR`, `resolveStatic`, `serveStatic` which are not closures over options.
+
+The requirement says "choose injected fixture directory if needed." Adding a `distDir` option is a surgical, backward-compatible change. Let me refactor the static functions to take a dist dir.
+[tool] Reading index.mjs:101-190
+[tool] status: Completed
+I'll make `resolveStatic` and `serveStatic` take a `distDir` parameter and add a `distDir` option to `createServer`.
+[tool] Editing index.mjs
+[tool] status: Completed
+
+[tool] Editing index.mjs
+[tool] status: Completed
+
+[tool] Editing index.mjs
+[tool] status: Completed
+
+[tool] Editing index.mjs
+[tool] status: Completed
+Now update the server tests. Fix the static test to use an injected fixture dir with a containment assertion, add the port-mismatch origin test, and add client-disconnect + normal-request-with-delayed-planner tests.
+[tool] Editing server.test.mjs
+[tool] status: Completed
+Now add the port-mismatch origin test after the existing cross-origin test:
+[tool] Editing server.test.mjs
+[tool] status: Completed
+Now replace the static test and add the disconnect / normal-completion tests. Let me replace the final static test block:
+[tool] Editing server.test.mjs
+[tool] status: Completed
+Now let me verify by running the tests. Let me check package.json for the test command.
+[tool] Reading package.json:1
+[tool] status: Completed
+I can't run terminal commands with my available tools (read/write only). Let me carefully re-verify the logic by re-reading the changed regions.
+
+One concern in the disconnect test: the response `close` fires on client disconnect and `!res.writableEnded` is true, so `controller.abort()` fires — good. But I need to confirm that Node's `res` emits `close` on socket destroy. It does. Also the `finally` sets `busy = false`, so the follow-up request succeeds.
+
+Another concern: in the abort path, the planner rejects with a plain `Error('aborted')`, not a `PlanError`. Since the response is already closed (`res.writableEnded`? no — on abort the socket is destroyed, `writableEnded` may be false but writing fails silently). The catch does `if (res.writableEnded) return;` then tries to `sendError`. Writing to a destroyed socket is a no-op/emits error caught by the outer `.catch`. That's fine; `busy` still resets in `finally`.
+
+Let me verify the full plan.mjs extractor region once more.
+[tool] Reading plan.mjs:156-250
+[tool] status: Completed
+Let me trace my malformed-span test carefully:
+
+`'log {oops not json} then {"broken":  and finally {"seed": 11, "ok": true}'`
+
+- `from=0`: first `{` at "log {oops not json}" — balanced span `{oops not json}`. JSON.parse fails → `from = start+1`.
+- Next `{` found is `{"broken":` — this scans: opens depth 1, hits `"broken"` string, then `:`, space, `and`... then reaches `{"seed"...}` — that inner `{` makes depth 2, its `}` brings depth back to 1, never reaching 0. Reaches end unbalanced → returns whole slice from `{"broken"`. JSON.parse fails → `from = start+1`.
+- Next `{` after that is `{"seed": 11, "ok": true}` — balanced, parses successfully. Returns `{seed:11, ok:true}`. 
+
+Now there's a subtlety in the ANSI test: `'\u001B[32m{"seed": 5}\u001B[0m'`. `stripAnsi` regex `\u001B\[[0-9;?]*[ -/]*[@-~]` matches `\u001B[32m` (params `32`, final `m`) and `\u001B[0m`. Result: `{"seed": 5}`. 
+
+Now let me verify the fence regex still works with the `[ -/]*` intermediate class — that's for the CSI middle bytes, not relevant here. Good.
+
+Let me double-check the `net` import usage and that the disconnect test's raw HTTP is well-formed. Host header includes port; Origin matches. Content-Length is byte length of the JSON body. Good.
+
+One issue: in the disconnect test, after `sock.destroy()`, the server's `busy` resets in the `finally`. But the planner promise rejects with `Error('aborted')` (not PlanError) — caught, `res.writableEnded` is likely false, tries `sendError` to a dead socket → outer `.catch` swallows. `busy=false` runs. Good.
+
+Let me verify the full server handlePlan region after edits:
+[tool] Reading index.mjs:233-277
+[tool] status: Completed
+All changes are in place and coherent. Let me do a final review of the whole plan.mjs defaultPlanner stderr section to confirm it's correct.
+[tool] Reading plan.mjs:276-315
+[tool] status: Completed
+All changes complete and consistent. The `child.stderr.on('data', ...)` handler is attached in flowing mode, which continuously drains the pipe so the child never blocks — the cap only limits our accounting, not the draining. I couldn't execute `node --test` (my tools are read/write only), but I traced each new test against the implementation by hand.
+
+## Files changed
+
+- `server/index.mjs`
+  - Same-origin guard now rejects a mismatched port on the same host (compares `origin.host` exactly against the request `Host`), so a Vite dev server on another local port is rejected like an external origin. No cross-port allowance — the demo serves the frontend on the same port.
+  - Abort logic moved from `req` `close` to `res` `close`, guarded by `!res.writableEnded`, so a request-body-finished `close` no longer aborts a live model call; only a real client disconnect does.
+  - Static serving parameterized with an injectable `distDir` option (defaults to `../dist`), keeping containment checks on the injected dir.
+- `server/plan.mjs`
+  - Added `stripAnsi` and strip ANSI before JSON extraction.
+  - JSON extractor now skips irrelevant/malformed brace spans and keeps scanning for the first parseable object (`scanForParseableObject` + offset-aware `scanBalancedObject`).
+  - Bounded stderr drain in `defaultPlanner` so a chatty child can't block on a full stderr pipe.
+- `tests/server.test.mjs`
+  - New test: same-host mismatched origin port → 403 `forbidden_origin`.
+  - New test: real client disconnect (raw socket) aborts a signal-aware delayed planner and resets the busy lock.
+  - New test: normal request with the same delayed planner completes and is not aborted.
+  - Reworked static test to use an injected fixture `distDir` with a containment assertion (serves index/asset, blocks traversal to an outside secret, SPA fallback), staying valid whether or not a real `dist` exists.
+- `tests/planner.test.mjs`
+  - New tests: ANSI codes stripped before parsing; irrelevant malformed brace spans skipped to reach valid JSON.
+
+## Tradeoffs
+
+- Adding a `distDir` option is a minimal API surface addition to `createServer`; it keeps the static test deterministic and independent of whether the frontend has been built. Default behavior is unchanged.
+- The unbalanced-brace scanner returns the trailing slice and the caller resumes at `start + 1`; this is O(n²) worst case on pathological brace-heavy input, but CLI output is small and bounded (256KB cap), so it's acceptable and simpler than a full tokenizer.
+- The stderr drain keeps only a byte counter, not the text, honoring the contract's "no personal story in logs" while still preventing pipe backpressure.
+- The disconnect test relies on timing (`setTimeout`) to sequence connect → start planner → disconnect; I kept margins generous (100ms/150ms) to reduce flakiness without slowing the suite much.
+- I left `localhost` vs `127.0.0.1` treated as distinct authorities (exact host match), which is stricter; the demo and tests use one consistent origin, so this is safe and avoids widening the guard.
+
+I did not touch any files outside my assigned `server/**`, `tests/server.test.mjs`, and `tests/planner.test.mjs`.

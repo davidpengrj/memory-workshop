@@ -1,0 +1,94 @@
+I'll read the UPGRADE.md contract file first to understand my assignment.[tool] status: Failed
+
+[tool] Finding UPGRADE.md
+[tool] status: Completed
+
+[tool] Reading UPGRADE.md:1, listing memory-theatre
+[tool] status: Completed
+I have the contract. Let me check the existing test style and package.json to match conventions, and look at the geometry.js to understand existing part sizing conventions.
+[tool] Reading geometry.test.mjs:1, package.json:1
+[tool] status: Completed
+I have enough understanding. The tests use `node:test` and `node:assert/strict`, ESM style. Now I'll implement the packing engine.
+
+Let me carefully parse the contract requirements:
+
+**`makeParts(size, quantity=1, mode='strips')`**:
+- size ∈ {140,180,220}, quantity 1..6, mode 'rings'|'strips'
+- Per unit: 6 layer squares size×size (layerId 0..5, kind='layer')
+- Spacer material:
+  - rings mode: 5 squares size×size, kind='spacer'
+  - strips mode: 20 rectangles forming 5 frames: 10 long strips size×(size*.05), 10 short strips (size*.9)×(size*.05), kind='strip'
+- Fields: {id,name,width,height,kind,layerId?,unit}, id unique, unit numbered from 1
+
+**`packParts(parts, stocks, options={})`** → {sheets, unplaced, stats}
+- MaxRects heuristic, deterministic, allow 90° part rotation
+- Priority: reclaimed stock first, then open sheets, then fewest new sheets
+- Validation with Chinese errors
+
+Let me write the implementation.
+[tool] Creating packing.js
+[tool] status: Completed
+Now the tests. Let me write comprehensive tests covering all contract-required scenarios.
+[tool] Creating packing.test.mjs
+[tool] status: Completed
+Now let me verify my logic by re-reading a few critical pieces. I cannot run shell, but I should trace through the tricky parts.
+
+One concern: in the "五框等面积" test, I check `s.name.includes(`框${f + 1} `)`. My strip names are `框${frame + 1} 长条${i + 1}` — so `框1 长条1`. The search `框1 ` matches. But `框1 ` would also be a prefix of... no, frame numbers are 1-5, single digit, and there's a space after. Good, no `框1` matching `框11`.
+
+Let me trace the rotation determinism concern in `stripInternal`. All part fields are preserved. Good.
+
+Let me double-check the boundary check in `assertSheetValid`: placements use footprint `w+gap`, but the placement's `width`/`height` stored are the net part dimensions (not including gap). The `place()` call reserves `footW = w+gap`. So a part at `x=margin` occupies net width `w`, and the reserved region extends `w+gap`. The net part right edge is `x + width = margin + w`, which must be `<= sheet.width - margin`. Since the free rect started at `margin` with width `usableW = min(width,bed) - 2*margin`, and we reserve `w+gap <= usableW`, so `w <= usableW - gap`, meaning `x + w <= margin + usableW - gap < sheet.width - margin`. Boundary holds.
+
+Let me verify one subtle issue: when a part exactly fits, `findPosition` uses `fr.width + 1e-6 >= w`. With footprint including gap this is fine. 
+
+Let me check the gap-spacing test logic more carefully. Two placements reserve footprints of `w+gap`. Since footprints don't overlap (MaxRects guarantees), the net parts are separated by at least `gap` in at least one axis. My test inflates one part by `gap` (half gap each side) and checks non-overlap with the other net part. Two footprints `[x, x+w+gap]` non-overlapping means net parts separated by `gap`. Inflating part A by gap/2 each side and checking against net B... 
+
+Actually let me reconsider: footprints are `A_foot = [ax, ax+wa+gap]` and `B_foot = [bx, bx+wb+gap]`, non-overlapping. The net parts are `A=[ax,ax+wa]`, `B=[bx,bx+wb]`. If footprints touch at boundary say `ax+wa+gap = bx`, then net gap between A right and B left = `bx - (ax+wa) = gap`. My test inflates A by gap/2 each side: `A_infl=[ax-gap/2, ax+wa+gap/2]`, B stays `[bx, bx+wb]`. A_infl right = `ax+wa+gap/2 = bx - gap/2 < bx`. No overlap. Good — the assertion passes when spacing >= gap.
+
+But there's a subtlety: footprints could be placed adjacent along different axes. My inflate-and-check works axis-independently since overlaps() checks both axes. If separated in either axis by gap, no overlap. Correct.
+
+Now let me verify the strips frame area equality holds mathematically. Each frame: 2 longs (size × stripH) + 2 shorts (0.9·size × stripH). All frames identical construction, so all equal. Test passes.
+
+Let me verify there are no issues with `scorePosition` when `posNormal`/`posRot` point to a free rect that was the best. It re-scans free rects matching the position corner. This is a heuristic tiebreak and deterministic. Fine.
+
+Let me re-check the reclaimed-first sheet ordering. In `tryPlacePart`, candidates sort reclaimed first then seq. New sheets are opened from `usable` which is ordered reclaimed-first. So the first opened sheet is reclaimed. The "优先使用余料" test expects `sheets[0]` reclaimed. But `sheets` is `usedSheets` in `openSheets` order (open order = seq order). The first opened sheet comes from `usable[0]` which is reclaimed. Good.
+
+Let me verify `makeParts` strips count: 6 layers + 5 frames × 4 strips = 6 + 20 = 26 per unit. For 3 units = 78. Test expects 78. Good.
+
+Let me verify the `round3` reference ordering — `round3` is used in `makeParts` (defined later in file). Since these are function declarations (hoisted), that's fine in ESM module scope.
+[tool] Searching for 'function round3' in packing.js
+[tool] status: Completed
+`round3` is a hoisted function declaration, so calling it from `makeParts` (defined earlier) works.
+
+One more check: in the reject-oversized test, when a stock is rejected and there's no usable board, the single part goes to `unplaced`. `tryPlacePart` returns false (no open sheets, `usable` empty), part pushed to unplaced. Correct.
+
+Let me verify the `stockFitsBed` rotated case in the test: board 410×300, bed 400×415. `normal`: 410 ≤ 400? No. `rotated`: height 300 ≤ 400 and width 410 ≤ 415? Yes → 'rotated'. Then usable board becomes width=300, height=410. Part 100×100 fits. Good.
+
+I've completed the assignment. Let me do a final review of the full implementation to catch any remaining issues.
+[tool] Reading packing.js:301-400
+[tool] status: Completed
+There's a subtle "少开新板" concern: my algorithm opens a new sheet per part when no open sheet fits, but once opened, it stays in `openSheets` and subsequent parts try it first. This achieves "fewest new sheets" reasonably since parts prefer existing open sheets before opening new ones. The area-descending order (First-Fit Decreasing) is a standard, effective bin-packing heuristic. Good.
+
+One edge: when a new sheet is opened but the part doesn't fit even on the fresh sheet (part larger than board), the empty sheet stays in `openSheets` but gets filtered out at the end (`placements.length > 0`). However, that empty opened sheet could later receive smaller parts — which is fine and desirable. Correct.
+
+The implementation is complete. Let me verify the file's opening exports match the contract exactly.
+[tool] Reading packing.js:401-490
+[tool] status: Completed
+Note: `sheet.width`/`sheet.height` used in `sheetArea` and returned sheet dims are the rotated working dimensions (post board-rotation), which is the correct footprint area for utilization. The unused `placedRects` variable is harmless but I'll remove it for cleanliness.
+[tool] Editing packing.js
+[tool] status: Completed
+Done. I implemented only the two assigned files and touched nothing else. I could not run `node --test` myself (no shell per the contract — Codex runs verification), but I traced the logic against each test.
+
+Files:
+- `src/packing.js` — pure-function, dependency-free ESM.
+  - `makeParts(size, quantity=1, mode='strips')`: validates size ∈ {140,180,220}, quantity 1..6, mode rings/strips (Chinese errors otherwise). Per unit emits 6 `layer` squares (layerId 0..5) plus spacers — 5 `size×size` `spacer` squares for rings, or 20 `strip` rectangles (10 long `size×size*.05`, 10 short `size*.9×size*.05`) forming 5 equal frames. Unique ids, `unit` numbered from 1.
+  - `packParts(parts, stocks, options={})`: full validation (finite numbers, ranges, integer counts, ≤156 parts, ≤8 stock rows, ≤40 total sheets, board 20..1000, bed 20..1000, margin 0..20, gap 1..15). Deterministic MaxRects with Best-Short-Side-Fit free-rectangle splitting, First-Fit-Decreasing part order, 90° part rotation and whole-board rotation to fit the bed. Priority: reclaimed → already-open sheets → fewest new sheets. Returns only used sheets with placements (`x,y` top-left mm, `rotated`, footprint `width/height`, `originalWidth/Height` when rotated), `unplaced`, and full `stats` including `rejectedStocks` and envelope-based `utilization` clamped 0..1.
+- `tests/packing.test.mjs` — covers both modes' part counts/sizes and five-frame equal area; insufficient stock → unplaced; reclaimed-first; part and board rotation; margin/gap with no overlap or out-of-bounds; 3 sizes × 2 modes with valid geometry; rejection of NaN/Infinity/negative/oversized/duplicate/oversized-quantity inputs; and deterministic repeat output.
+
+Algorithm limitations:
+- Heuristic (FFD + MaxRects BSSF), not globally optimal; it can leave material unused that an optimal nester would fill.
+- Utilization is bounding-box envelope area over used-sheet area — it is not net material area and does not account for kerf, cut paths, or grain direction.
+- No nesting inside part holes (per contract); ring/strip spacers are packed by their outer bounding rectangle only.
+- Rotation is limited to 0°/90°; no arbitrary-angle or irregular-polygon nesting.
+- Placement uses one heuristic pass with no backtracking, so a part that fails on all current boards goes straight to `unplaced` even if reordering could have fit everything.
+- Empty opened boards (when a part exceeds every board) are dropped from results but were still "opened" during the pass; they can absorb later smaller parts but do not retroactively reduce new-sheet decisions.

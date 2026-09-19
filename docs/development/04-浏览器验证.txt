@@ -1,0 +1,7 @@
+REAL_AI_SUCCESS 14312 ms 山间初见的那束星光
+UI_TESTS_PASS: presets, palette, dimensions, layers, cut mode, ZIP, save/restore, validation, real AI, mobile, console
+
+最终构建复核（四意象修正后）：
+BUTTONS ["制作指南 ","","一起看过的海","小猫等我回家","属于我们的城","","","",""," 把回忆变成光 ","展开分层","暖光已开启","","保存","01取景框","02回忆主角","03近景片段","04故事地标","05远处风景","06天空背板"," 下载制作包 ","关于这个作品 "]
+ERRORS []
+MOBILE_OVERFLOW false

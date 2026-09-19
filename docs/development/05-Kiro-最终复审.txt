@@ -1,0 +1,38 @@
+I'll read the contract and the core files to conduct this review.
+[tool] Reading CONTRACT.md:1, index.mjs:1, plan.mjs:1
+[tool] status: Completed
+Now let me read the frontend files owned by the parent to check for integration issues.
+[tool] Reading geometry.js:1, export.js:1, main.jsx:1
+[tool] status: Completed
+I have all the files I need. Let me verify a couple of specific concerns before finalizing — the cache behavior on validation failure and the health check binary name consistency.
+
+The task instructed me to implement server files, but this message is a read-only final review. I'll conduct the review as requested and not edit anything.
+
+Let me verify one concern: whether an in-flight aborted request properly resets `busy`, and check the `checkAi` binary name matches the spawn binary.
+
+Both use `kiro-cli`. Consistent. Now the review.
+
+## Review findings
+
+I read CONTRACT.md, src/geometry.js, src/export.js, src/main.jsx, server/index.mjs, and server/plan.mjs. No files edited. Focused on the high-impact categories you named.
+
+No blockers. The demo-critical paths are sound. Four things worth knowing, none require a change before recording:
+
+Finding 1 — AI status is honestly reported (verified, not a problem)
+- `handleHealth` calls `defaultCheckAi`, which runs `kiro-cli --version` with no model call, and `/api/plan` returns `source:'kiro'` only after a real CLI success. On failure it returns meaningful `{error,code}` with no silent template fallback (server/index.mjs `handlePlan` catch block; server/plan.mjs `defaultPlanner` close handler). The frontend gates the generate button on `status==='ready'` and labels example vs AI via `source-badge`/`source==='kiro'`. No fabricated AI status. Evidence: `defaultCheckAi` uses `spawnSync('kiro-cli', ['--version'])`; `generate()` throws on `!response.ok`.
+
+Finding 2 — Repeated paid requests are guarded (verified)
+- Single-flight `busy` lock returns 429 when in use and is reset in `finally`; exact-story cache (`cacheGet`/`cacheSet`, limit 12) short-circuits with `elapsedMs:0, cached:true` and no spawn; `isSameOriginLocalhost` blocks cross-origin credit spend; frontend surfaces the cached case ("未重复调用模型"). No accidental repeat spend path found.
+
+Finding 3 — No password/token exposure (verified)
+- No secrets read or logged. Story is never console-logged; stderr from the CLI is drained to a bounded tail and never surfaced (server/plan.mjs). Static serving is path-traversal guarded (`resolveStatic` confines to `distDir`, rejects `\0`). Credentials are left to the Kiro CLI per README.
+
+Finding 4 — Low-severity: cache does not skip on client abort, but a genuine abort never reaches `cacheSet`
+- In `handlePlan`, a real client disconnect aborts the planner, which rejects with `code:'aborted'` before `validatePlan`/`cacheSet`, so nothing invalid is cached. This is correct. Only flagging that the `res.on('close')` heuristic (`!res.writableEnded`) is the single subtle spot; it is written correctly (aborts only when the response was not fully written). No action needed.
+
+Finding 5 — Low-severity UX note, not a broken flow: motif selection can silently drop a 4th motif
+- In `createDesign` (src/geometry.js), layers place `foreground`, `mid`, `landmark`, and one `extra` (rendered only on layer i===2 at x=154). With 4 motifs all four render; the selection logic has deterministic fallbacks so a scene always renders even for odd combinations. This is within the disclosed "bounded 12 motifs / constrained parametric" scope, not a broken flow. No change.
+
+Disclosed limits I confirmed are consistently stated across export.js (`先读我.txt`, assembly HTML, `validation.json` `physicalTested:false`), main.jsx modals, and CONTRACT.md: no physical fabrication proof, no kerf compensation, illustrative lighting, bounded 12 motifs. Desktop and mobile flows read intact — mobile CSS collapses the floating art (`@media(max-width:600px)`), modal has focus-trap and scroll-lock, and example mode needs no account.
+
+Safe to record.

@@ -1,0 +1,25 @@
+{
+  "plan": {
+    "title": "海边看的那场日出",
+    "subtitle": "Dawn we watched by the sea",
+    "narrative": "毕业前那个清晨，我们并肩坐在海边，等第一缕光从水面升起。远处灯塔安静地立着，一艘帆船慢慢驶过。风带着海的味道，谁都没说话，却都记住了那一刻。这盏光影盒，把两个人看海的记忆收进层层暖光里。",
+    "theme": "coast",
+    "palette": "dusk",
+    "sky": "sun",
+    "motifs": [
+      "lighthouse",
+      "sailboat",
+      "couple"
+    ],
+    "seed": 428173,
+    "dedication": "愿你带着这束光，走向更远的海",
+    "decisions": [
+      "选择海岸场景与日出天空，还原两人清晨并肩看海的核心画面。",
+      "灯塔与帆船作为远景意象，呼应回忆里守望与远行的两种心情。",
+      "暖色调让层层光影透出黎明的柔光，适合作为郑重的毕业礼物。"
+    ]
+  },
+  "source": "kiro",
+  "elapsedMs": 15029,
+  "cached": false
+}

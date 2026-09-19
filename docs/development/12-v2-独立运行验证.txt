@@ -1,0 +1,1 @@
+PASS prebuilt app serves HTML, JS, CSS and health without node_modules

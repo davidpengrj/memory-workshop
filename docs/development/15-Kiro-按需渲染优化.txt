@@ -1,0 +1,62 @@
+I'll read my assigned files first to understand the current implementation.
+[tool] Reading Scene.jsx:1, StandPreview.jsx:1
+[tool] status: Completed
+Now I understand both. Let me design a small invalidation helper. Let me check the CSS for fallback classes to reuse styling.
+[tool] Searching for 'fallback|stand-model|scene-host' in memory-theatre
+[tool] status: Completed
+There's a `.fallback-art` class used in Scene. I'll reuse a simple inline-styled fallback for StandPreview to avoid touching CSS (owned by Codex). Let me check the `.fallback-art` styling and `.stand-model` to understand dimensions.
+[tool] Searching for '\.fallback-art|\.stand-model' in src
+[tool] status: Completed
+CSS is minified. I'll reuse the existing `.fallback-art` class (used by Scene) for StandPreview's fallback too, plus a plain text message, keeping it framework-free. Now let me create the render-loop helper.
+
+The helper provides an on-demand rendering loop: `invalidate()` requests a frame; the loop keeps running while a `keepRunning` callback returns true (interpolation/damping active), then stops. It handles visibility (IntersectionObserver + visibilitychange) and disposal.
+[tool] Creating render-loop.js
+[tool] status: Completed
+Now update Scene.jsx to use the loop. The key challenge: the render function must report whether animation should continue. I'll track whether interpolation targets are reached and whether OrbitControls damping is still moving. OrbitControls' `update()` returns `true` if the camera changed (when damping/auto-rotate active).
+
+Let me rewrite Scene.jsx's animate logic. I need to:
+- Add a `settled` check for layer positions, warm/key intensity, camera.zoom deltas.
+- Wake on control `change` events, resize, prop changes (via a ref that invalidates), and reduced-motion handling.
+[tool] Creating Scene.jsx
+[tool] status: Completed
+Now StandPreview. It has no interpolation, just orbit controls damping. It should render only while damping is moving after interaction, plus resize/prop changes. And add a graceful fallback for WebGL creation failure.
+[tool] Creating StandPreview.jsx
+[tool] status: Completed
+Now the test for the render loop. Let me check the existing test conventions.
+[tool] Reading listing tests
+[tool] status: Completed
+
+[tool] Reading geometry.test.mjs:1
+[tool] status: Completed
+Now I'll write the render-loop test with fake RAF, document, and IntersectionObserver stubs.
+[tool] Creating render-loop.test.mjs
+[tool] status: Completed
+Let me verify my logic against a subtle issue: in `createRenderLoop`, the initial `invalidate()` runs before `return`, so `engine.current` isn't set yet in Scene — but that's fine since the loop stores its own state. However, in the offscreen test, after `h.trigger(false)`, I call `loop.invalidate()` while hidden — but `visible` was set to `false` only if `nowVisible !== visible`. Initial `visible=true`, trigger(false) sets it false. Good.
+
+One concern: the test `settles` — after the loop stops and I do `remaining=1;loop.invalidate()`, render returns `(--remaining)>0` = `0>0` = false, so it stops after one frame. Correct.
+
+Let me double check the `render` returning non-boolean. In Scene, `step()` returns `moving||controlsMoving` which is boolean. In `tick`, `render() === true`. `moving||controlsMoving` — `controls.update()===true` is boolean, `moving` is boolean, so `||` yields boolean. Good.
+
+Let me verify no test runner config issue — check package.json test script.
+[tool] Searching for '"test"' in memory-theatre
+[tool] status: Completed
+Test script is `node --test tests/*.test.mjs`, so my file matches the pattern. I can't run shell, but the harness uses only Node built-ins and imports the plain ES module `render-loop.js` (no three.js), so it'll run cleanly.
+
+Let me verify one edge: in the `settles` re-wake step, after `remaining=3` was consumed, `remaining` is 0 at end. Setting `remaining=1` then flush: render does `renders++` and `(--remaining)>0` → `0>0` false → stops. `renders` becomes 4 but I only assert `isRunning()===false`. Good.
+
+Also verify the initial `invalidate()` in constructor happens after observer setup — yes, observer/doc wiring precedes the final `invalidate()`. Good.
+
+Changes complete.
+
+Assigned files changed:
+- `src/render-loop.js` (new helper): on-demand loop. `invalidate()` schedules a single coalesced RAF; the render callback returns `true` to request another frame and the loop continues until it returns falsy, then stops. IntersectionObserver pauses when offscreen and auto-wakes when visible; `visibilitychange` pauses when the document is hidden and wakes when shown. `dispose()` cancels the pending frame, disconnects the observer, and removes the listener. No intervals, no dependencies, DOM APIs injectable for testing.
+- `src/Scene.jsx`: replaced the always-on RAF with the loop. The step function computes interpolation deltas (layer explode positions, warm/key light intensity, camera zoom) and OrbitControls damping (`controls.update()` return value) to decide whether to keep rendering, then settles and stops. `controls` `start`/`change` events, resize, prop changes (`exploded/lit/activeLayer`) and `resetKey` call `invalidate()`. Reduced-motion preference snaps interpolation to target in one frame (lerp factor 1) without altering default styling. All prior geometry, shadows, lighting, orbit damping, explode transitions, active-layer highlight, reset, and responsiveness are preserved; disposal now also tears down the loop and removes control listeners.
+- `src/StandPreview.jsx`: same on-demand loop driven by control damping plus resize/prop invalidation. Added a graceful fallback panel (reusing `.fallback-art`) with a clear message when WebGL creation or geometry build fails, instead of an empty panel; geometry is disposed on the failure path too.
+- `tests/render-loop.test.mjs` (new): node:test coverage for settle-then-stop, invalidate coalescing, offscreen pause/resume, document-hidden pause/wake, disposal cleanup, and observed-element wiring, using deterministic RAF/document/IntersectionObserver stubs.
+
+Limitations:
+- I could not run `npm test` or the build (no shell available); the render-loop test only imports the dependency-free helper, so it should run under `node --test`, but I did not execute it. The Scene/StandPreview JSX changes are not exercised by unit tests and rely on your browser instrumentation.
+- The "still moving" thresholds in Scene are heuristic epsilons; on extreme device pixel ratios or unusual timing the settle point is approximate but bounded (it stops within a frame of reaching target). OrbitControls' `change`/`start` events plus its `update()` return value are the wake/continue signals; if a future three.js version changes that contract, damping tails could stop a frame early.
+- Reduced-motion handling snaps interpolation only; it does not disable OrbitControls damping (kept for interaction feel) and does not change any default CSS.
+- The StandPreview fallback uses a small inline style with a CSS-var fallback color to avoid editing Codex-owned CSS; if you prefer a dedicated class, that would need a CSS change outside my scope.
+- I did not touch `main.jsx`, `Production.jsx`, or CSS.

@@ -1,0 +1,224 @@
+
+> memory-theatre@1.0.0 test
+> node --test tests/*.test.mjs
+
+TAP version 13
+# Subtest: all supported motifs stay connected and closed across terrain/seed extremes
+ok 1 - all supported motifs stay connected and closed across terrain/seed extremes
+  ---
+  duration_ms: 1021.166625
+  type: 'test'
+  ...
+# Subtest: four motifs and all supported physical sizes export actual millimetres
+ok 2 - four motifs and all supported physical sizes export actual millimetres
+  ---
+  duration_ms: 360.899542
+  type: 'test'
+  ...
+# Subtest: export package has six layers, a spacer, calibration, instructions, and no personal story
+ok 3 - export package has six layers, a spacer, calibration, instructions, and no personal story
+  ---
+  duration_ms: 24.916041
+  type: 'test'
+  ...
+# Subtest: export rejects disconnected geometry and escapes AI copy in HTML/SVG
+ok 4 - export rejects disconnected geometry and escapes AI copy in HTML/SVG
+  ---
+  duration_ms: 4.158333
+  type: 'test'
+  ...
+# Subtest: validateStory trims and enforces bounds
+ok 5 - validateStory trims and enforces bounds
+  ---
+  duration_ms: 0.736584
+  type: 'test'
+  ...
+# Subtest: validatePlan accepts a canonical plan and reorders keys
+ok 6 - validatePlan accepts a canonical plan and reorders keys
+  ---
+  duration_ms: 0.512958
+  type: 'test'
+  ...
+# Subtest: validatePlan rejects extra/unsafe fields
+ok 7 - validatePlan rejects extra/unsafe fields
+  ---
+  duration_ms: 0.069584
+  type: 'test'
+  ...
+# Subtest: validatePlan rejects bad enums
+ok 8 - validatePlan rejects bad enums
+  ---
+  duration_ms: 0.090917
+  type: 'test'
+  ...
+# Subtest: validatePlan enforces motif rules
+ok 9 - validatePlan enforces motif rules
+  ---
+  duration_ms: 0.257583
+  type: 'test'
+  ...
+# Subtest: validatePlan enforces seed range
+ok 10 - validatePlan enforces seed range
+  ---
+  duration_ms: 0.089834
+  type: 'test'
+  ...
+# Subtest: validatePlan enforces decisions count and content
+ok 11 - validatePlan enforces decisions count and content
+  ---
+  duration_ms: 0.129125
+  type: 'test'
+  ...
+# Subtest: validatePlan enforces string length limits
+ok 12 - validatePlan enforces string length limits
+  ---
+  duration_ms: 0.104042
+  type: 'test'
+  ...
+# Subtest: validatePlan rejects non-object shapes
+ok 13 - validatePlan rejects non-object shapes
+  ---
+  duration_ms: 0.229667
+  type: 'test'
+  ...
+# Subtest: extractJsonObject parses plain JSON
+ok 14 - extractJsonObject parses plain JSON
+  ---
+  duration_ms: 0.489833
+  type: 'test'
+  ...
+# Subtest: extractJsonObject parses fenced JSON with chatter
+ok 15 - extractJsonObject parses fenced JSON with chatter
+  ---
+  duration_ms: 0.174042
+  type: 'test'
+  ...
+# Subtest: extractJsonObject ignores braces inside strings
+ok 16 - extractJsonObject ignores braces inside strings
+  ---
+  duration_ms: 0.044708
+  type: 'test'
+  ...
+# Subtest: extractJsonObject strips ANSI color codes before parsing
+ok 17 - extractJsonObject strips ANSI color codes before parsing
+  ---
+  duration_ms: 0.034
+  type: 'test'
+  ...
+# Subtest: extractJsonObject skips irrelevant malformed brace spans
+ok 18 - extractJsonObject skips irrelevant malformed brace spans
+  ---
+  duration_ms: 0.058
+  type: 'test'
+  ...
+# Subtest: extractJsonObject throws on no JSON
+ok 19 - extractJsonObject throws on no JSON
+  ---
+  duration_ms: 0.49575
+  type: 'test'
+  ...
+# Subtest: buildPrompt embeds story as data and keeps schema constraints
+ok 20 - buildPrompt embeds story as data and keeps schema constraints
+  ---
+  duration_ms: 0.092834
+  type: 'test'
+  ...
+# Subtest: GET /api/health reports provider and availability
+ok 21 - GET /api/health reports provider and availability
+  ---
+  duration_ms: 14.097917
+  type: 'test'
+  ...
+# Subtest: POST /api/plan returns a validated plan
+ok 22 - POST /api/plan returns a validated plan
+  ---
+  duration_ms: 6.678959
+  type: 'test'
+  ...
+# Subtest: POST /api/plan caches identical stories
+ok 23 - POST /api/plan caches identical stories
+  ---
+  duration_ms: 7.877625
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects short stories
+ok 24 - POST /api/plan rejects short stories
+  ---
+  duration_ms: 2.538084
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects invalid plan from planner
+ok 25 - POST /api/plan rejects invalid plan from planner
+  ---
+  duration_ms: 1.793125
+  type: 'test'
+  ...
+# Subtest: POST /api/plan enforces single concurrent request (429)
+ok 26 - POST /api/plan enforces single concurrent request (429)
+  ---
+  duration_ms: 56.42425
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects non-JSON content type
+ok 27 - POST /api/plan rejects non-JSON content type
+  ---
+  duration_ms: 2.593834
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects cross-origin requests
+ok 28 - POST /api/plan rejects cross-origin requests
+  ---
+  duration_ms: 1.714375
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects same-host mismatched origin port
+ok 29 - POST /api/plan rejects same-host mismatched origin port
+  ---
+  duration_ms: 1.540042
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects malformed JSON body
+ok 30 - POST /api/plan rejects malformed JSON body
+  ---
+  duration_ms: 1.163916
+  type: 'test'
+  ...
+# Subtest: unknown /api route returns 404
+ok 31 - unknown /api route returns 404
+  ---
+  duration_ms: 2.163208
+  type: 'test'
+  ...
+# Subtest: static request without dist falls through to 404
+ok 32 - static request without dist falls through to 404
+  ---
+  duration_ms: 3.084042
+  type: 'test'
+  ...
+# Subtest: static serving stays contained after dist exists (injected fixture)
+ok 33 - static serving stays contained after dist exists (injected fixture)
+  ---
+  duration_ms: 4.410166
+  type: 'test'
+  ...
+# Subtest: client disconnect aborts the planner via injected signal
+ok 34 - client disconnect aborts the planner via injected signal
+  ---
+  duration_ms: 2259.608208
+  type: 'test'
+  ...
+# Subtest: normal request with delayed planner is not aborted
+ok 35 - normal request with delayed planner is not aborted
+  ---
+  duration_ms: 131.398167
+  type: 'test'
+  ...
+1..35
+# tests 35
+# suites 0
+# pass 35
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2558.343042

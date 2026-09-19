@@ -1,0 +1,356 @@
+
+> memory-theatre@2.0.0 test
+> node --test tests/*.test.mjs
+
+TAP version 13
+# Subtest: all supported motifs stay connected and closed across terrain/seed extremes
+ok 1 - all supported motifs stay connected and closed across terrain/seed extremes
+  ---
+  duration_ms: 1029.623375
+  type: 'test'
+  ...
+# Subtest: four motifs and all supported physical sizes export actual millimetres
+ok 2 - four motifs and all supported physical sizes export actual millimetres
+  ---
+  duration_ms: 343.757875
+  type: 'test'
+  ...
+# Subtest: export package has six layers, a spacer, calibration, instructions, and no personal story
+ok 3 - export package has six layers, a spacer, calibration, instructions, and no personal story
+  ---
+  duration_ms: 22.801583
+  type: 'test'
+  ...
+# Subtest: export rejects disconnected geometry and escapes AI copy in HTML/SVG
+ok 4 - export rejects disconnected geometry and escapes AI copy in HTML/SVG
+  ---
+  duration_ms: 3.261625
+  type: 'test'
+  ...
+# Subtest: offset keeps holes correctly oriented and reinforcement preserves actual contours and dimensions
+ok 5 - offset keeps holes correctly oriented and reinforcement preserves actual contours and dimensions
+  ---
+  duration_ms: 271.675208
+  type: 'test'
+  ...
+# Subtest: geometric thin-detail estimate decreases with reinforcement and reports remaining small holes
+ok 6 - geometric thin-detail estimate decreases with reinforcement and reports remaining small holes
+  ---
+  duration_ms: 75.798334
+  type: 'test'
+  ...
+# Subtest: kerf measurements distinguish valid, inconsistent and physically invalid measurements
+ok 7 - kerf measurements distinguish valid, inconsistent and physically invalid measurements
+  ---
+  duration_ms: 0.156083
+  type: 'test'
+  ...
+# Subtest: STL stand uses measured stack thickness and is a closed, consistently wound solid
+ok 8 - STL stand uses measured stack thickness and is a closed, consistently wound solid
+  ---
+  duration_ms: 5.160833
+  type: 'test'
+  ...
+# Subtest: production archive exports every placed part at real millimetres with measured stand and records
+ok 9 - production archive exports every placed part at real millimetres with measured stand and records
+  ---
+  duration_ms: 61.95325
+  type: 'test'
+  ...
+# Subtest: batch archive requests one stand per completed product
+ok 10 - batch archive requests one stand per completed product
+  ---
+  duration_ms: 23.63425
+  type: 'test'
+  ...
+# Subtest: makeParts rings 模式：每件六层图案 + 五块间隔环
+ok 11 - makeParts rings 模式：每件六层图案 + 五块间隔环
+  ---
+  duration_ms: 1.933416
+  type: 'test'
+  ...
+# Subtest: makeParts strips 模式：20 根条组成五个等尺寸框，长短条端部对接
+ok 12 - makeParts strips 模式：20 根条组成五个等尺寸框，长短条端部对接
+  ---
+  duration_ms: 0.717042
+  type: 'test'
+  ...
+# Subtest: makeParts 多件展开：id 唯一、unit 从 1 起编号
+ok 13 - makeParts 多件展开：id 唯一、unit 从 1 起编号
+  ---
+  duration_ms: 0.239667
+  type: 'test'
+  ...
+# Subtest: makeParts 拒绝非法尺寸/数量/模式
+ok 14 - makeParts 拒绝非法尺寸/数量/模式
+  ---
+  duration_ms: 0.42275
+  type: 'test'
+  ...
+# Subtest: packParts 三尺寸 × 两模式在充足库存下全部放入且几何合法
+ok 15 - packParts 三尺寸 × 两模式在充足库存下全部放入且几何合法
+  ---
+  duration_ms: 13.021042
+  type: 'test'
+  ...
+# Subtest: packParts 有限库存不足时剩余零件进入 unplaced
+ok 16 - packParts 有限库存不足时剩余零件进入 unplaced
+  ---
+  duration_ms: 0.251208
+  type: 'test'
+  ...
+# Subtest: packParts 优先使用余料板
+ok 17 - packParts 优先使用余料板
+  ---
+  duration_ms: 0.323625
+  type: 'test'
+  ...
+# Subtest: packParts 允许旋转零件以放入较窄板
+ok 18 - packParts 允许旋转零件以放入较窄板
+  ---
+  duration_ms: 0.178459
+  type: 'test'
+  ...
+# Subtest: packParts 整张板超床可旋转适配；两向都放不下则拒绝并记录
+ok 19 - packParts 整张板超床可旋转适配；两向都放不下则拒绝并记录
+  ---
+  duration_ms: 1.040459
+  type: 'test'
+  ...
+# Subtest: packParts margin 与 gap 生效：无重叠、不越界
+ok 20 - packParts margin 与 gap 生效：无重叠、不越界
+  ---
+  duration_ms: 1.388333
+  type: 'test'
+  ...
+# Subtest: packParts 拒绝 NaN/无穷/负尺寸/超大数量/重复 id
+ok 21 - packParts 拒绝 NaN/无穷/负尺寸/超大数量/重复 id
+  ---
+  duration_ms: 1.632959
+  type: 'test'
+  ...
+# Subtest: packParts 相同输入重复调用输出一致（确定性）
+ok 22 - packParts 相同输入重复调用输出一致（确定性）
+  ---
+  duration_ms: 2.116917
+  type: 'test'
+  ...
+# Subtest: packParts stats.utilization 在 0..1 且不悄悄补库存/缩放零件
+ok 23 - packParts stats.utilization 在 0..1 且不悄悄补库存/缩放零件
+  ---
+  duration_ms: 0.285625
+  type: 'test'
+  ...
+# Subtest: packParts 回归：靠板边不留尾部 gap —— 180 方块应放入 188 板（margin4 gap3）
+ok 24 - packParts 回归：靠板边不留尾部 gap —— 180 方块应放入 188 板（margin4 gap3）
+  ---
+  duration_ms: 0.078375
+  type: 'test'
+  ...
+# Subtest: packParts 回归：相邻两件真实间距不小于整个 gap（不只半个）
+ok 25 - packParts 回归：相邻两件真实间距不小于整个 gap（不只半个）
+  ---
+  duration_ms: 0.415875
+  type: 'test'
+  ...
+# Subtest: packParts 场景回归：4×(300×80余料) + 4×(300×400新)，size180 q1，床400x415 margin4 gap3
+ok 26 - packParts 场景回归：4×(300×80余料) + 4×(300×400新)，size180 q1，床400x415 margin4 gap3
+  ---
+  duration_ms: 0.227042
+  type: 'test'
+  ...
+# Subtest: validateStory trims and enforces bounds
+ok 27 - validateStory trims and enforces bounds
+  ---
+  duration_ms: 1.394459
+  type: 'test'
+  ...
+# Subtest: validatePlan accepts a canonical plan and reorders keys
+ok 28 - validatePlan accepts a canonical plan and reorders keys
+  ---
+  duration_ms: 1.786334
+  type: 'test'
+  ...
+# Subtest: validatePlan rejects extra/unsafe fields
+ok 29 - validatePlan rejects extra/unsafe fields
+  ---
+  duration_ms: 0.263333
+  type: 'test'
+  ...
+# Subtest: validatePlan rejects bad enums
+ok 30 - validatePlan rejects bad enums
+  ---
+  duration_ms: 0.216833
+  type: 'test'
+  ...
+# Subtest: validatePlan enforces motif rules
+ok 31 - validatePlan enforces motif rules
+  ---
+  duration_ms: 0.691
+  type: 'test'
+  ...
+# Subtest: validatePlan enforces seed range
+ok 32 - validatePlan enforces seed range
+  ---
+  duration_ms: 0.328708
+  type: 'test'
+  ...
+# Subtest: validatePlan enforces decisions count and content
+ok 33 - validatePlan enforces decisions count and content
+  ---
+  duration_ms: 0.320458
+  type: 'test'
+  ...
+# Subtest: validatePlan enforces string length limits
+ok 34 - validatePlan enforces string length limits
+  ---
+  duration_ms: 0.233542
+  type: 'test'
+  ...
+# Subtest: validatePlan rejects non-object shapes
+ok 35 - validatePlan rejects non-object shapes
+  ---
+  duration_ms: 0.458375
+  type: 'test'
+  ...
+# Subtest: extractJsonObject parses plain JSON
+ok 36 - extractJsonObject parses plain JSON
+  ---
+  duration_ms: 0.923166
+  type: 'test'
+  ...
+# Subtest: extractJsonObject parses fenced JSON with chatter
+ok 37 - extractJsonObject parses fenced JSON with chatter
+  ---
+  duration_ms: 0.240292
+  type: 'test'
+  ...
+# Subtest: extractJsonObject ignores braces inside strings
+ok 38 - extractJsonObject ignores braces inside strings
+  ---
+  duration_ms: 0.055042
+  type: 'test'
+  ...
+# Subtest: extractJsonObject strips ANSI color codes before parsing
+ok 39 - extractJsonObject strips ANSI color codes before parsing
+  ---
+  duration_ms: 0.039209
+  type: 'test'
+  ...
+# Subtest: extractJsonObject skips irrelevant malformed brace spans
+ok 40 - extractJsonObject skips irrelevant malformed brace spans
+  ---
+  duration_ms: 0.065583
+  type: 'test'
+  ...
+# Subtest: extractJsonObject throws on no JSON
+ok 41 - extractJsonObject throws on no JSON
+  ---
+  duration_ms: 3.169709
+  type: 'test'
+  ...
+# Subtest: buildPrompt embeds story as data and keeps schema constraints
+ok 42 - buildPrompt embeds story as data and keeps schema constraints
+  ---
+  duration_ms: 0.402167
+  type: 'test'
+  ...
+# Subtest: GET /api/health reports provider and availability
+ok 43 - GET /api/health reports provider and availability
+  ---
+  duration_ms: 15.553916
+  type: 'test'
+  ...
+# Subtest: POST /api/plan returns a validated plan
+ok 44 - POST /api/plan returns a validated plan
+  ---
+  duration_ms: 6.020084
+  type: 'test'
+  ...
+# Subtest: POST /api/plan caches identical stories
+ok 45 - POST /api/plan caches identical stories
+  ---
+  duration_ms: 8.113958
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects short stories
+ok 46 - POST /api/plan rejects short stories
+  ---
+  duration_ms: 2.451125
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects invalid plan from planner
+ok 47 - POST /api/plan rejects invalid plan from planner
+  ---
+  duration_ms: 2.398958
+  type: 'test'
+  ...
+# Subtest: POST /api/plan enforces single concurrent request (429)
+ok 48 - POST /api/plan enforces single concurrent request (429)
+  ---
+  duration_ms: 55.539417
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects non-JSON content type
+ok 49 - POST /api/plan rejects non-JSON content type
+  ---
+  duration_ms: 2.814166
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects cross-origin requests
+ok 50 - POST /api/plan rejects cross-origin requests
+  ---
+  duration_ms: 2.481875
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects same-host mismatched origin port
+ok 51 - POST /api/plan rejects same-host mismatched origin port
+  ---
+  duration_ms: 2.064125
+  type: 'test'
+  ...
+# Subtest: POST /api/plan rejects malformed JSON body
+ok 52 - POST /api/plan rejects malformed JSON body
+  ---
+  duration_ms: 1.267541
+  type: 'test'
+  ...
+# Subtest: unknown /api route returns 404
+ok 53 - unknown /api route returns 404
+  ---
+  duration_ms: 1.921917
+  type: 'test'
+  ...
+# Subtest: static request without dist falls through to 404
+ok 54 - static request without dist falls through to 404
+  ---
+  duration_ms: 3.335709
+  type: 'test'
+  ...
+# Subtest: static serving stays contained after dist exists (injected fixture)
+ok 55 - static serving stays contained after dist exists (injected fixture)
+  ---
+  duration_ms: 5.595709
+  type: 'test'
+  ...
+# Subtest: client disconnect aborts the planner via injected signal
+ok 56 - client disconnect aborts the planner via injected signal
+  ---
+  duration_ms: 2258.738041
+  type: 'test'
+  ...
+# Subtest: normal request with delayed planner is not aborted
+ok 57 - normal request with delayed planner is not aborted
+  ---
+  duration_ms: 132.551834
+  type: 'test'
+  ...
+1..57
+# tests 57
+# suites 0
+# pass 57
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2587.363958

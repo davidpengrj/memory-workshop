@@ -1,0 +1,6 @@
+PASS refresh restores rendered design, ungenerated story, size, reinforcement and source without AI calls
+PASS 3D wakes for explode, drag, reset, lighting and layer selection, then returns to idle
+PASS six candidate comparisons, alternative selection, matching download, board overview and keyboard detail selection
+PASS stand resumes on screen and interaction, updates thickness, and stops offscreen
+PASS mobile overview and comparison fit viewport; no page errors
+PASS WebGL fallback keeps STL download; blocked storage keeps app usable

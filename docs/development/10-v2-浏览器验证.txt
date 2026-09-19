@@ -1,0 +1,9 @@
+PASS finite stock shortage → strips complete
+PASS largest feasible size chosen without adding stock
+PASS batch order changes required parts and feasible size
+PASS excluded stock and invalid input block export
+PASS actual contour reinforcement, dual kerf measurements and parametric stand
+PASS downloaded STL and production ZIP contain current geometry/settings
+PASS story design and production share current plan
+PASS same-material measurements persist; switching material resets stand thickness and calibration
+PASS mobile layout and persisted inventory; no page errors

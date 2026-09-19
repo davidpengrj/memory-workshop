@@ -1,0 +1,60 @@
+I'll start by reading CONTRACT.md and understanding the project structure.
+[tool] Reading listing memory-theatre
+[tool] status: Completed
+
+[tool] Reading CONTRACT.md:1, package.json:1
+[tool] status: Completed
+Now let me check the existing server/tests directories and the planner agent config.
+[tool] Reading listing server, listing tests, memory-planner.json:1
+[tool] status: Completed
+Both server/ and tests/ are empty. Let me confirm start script points to `server/index.mjs`. Now I'll implement the server. Let me build it carefully per the contract.
+
+I'll create three files: `server/plan.mjs` (validation + planner spawn logic), `server/index.mjs` (HTTP server + static serving), and the two test files.
+[tool] Creating plan.mjs
+[tool] status: Completed
+Now the HTTP server with static serving, health, plan endpoint, concurrency guard, cache, and origin protection.
+[tool] Creating index.mjs
+[tool] status: Completed
+Now the two test files. `planner.test.mjs` covers validation/parsing logic; `server.test.mjs` covers HTTP behavior with an injected planner (no real credits).
+[tool] Creating planner.test.mjs
+[tool] status: Completed
+
+[tool] Creating server.test.mjs
+[tool] status: Completed
+Now let me run only my two test files (not the whole suite, since parent's tests may not exist yet).
+[tool] Reading listing tests
+[tool] status: Completed
+I can only use read/write/glob/grep tools — I have no terminal execution tool available, so I cannot run the tests myself. Let me carefully re-verify the code by re-reading the critical logic paths that the tests exercise, since I can't execute.
+
+Let me double-check one subtle point: the `defaultCheckAi` logic and the traversal test. The path traversal test `fetch('/../server/index.mjs')` — the browser/fetch normalizes `..` in the URL before sending, so the server receives `/server/index.mjs`. My `resolveStatic` resolves that against `DIST_DIR`; since `dist` doesn't exist in the test env, `fsp.stat` throws and returns null, then SPA fallback checks for `dist/index.html` which also doesn't exist → 404. Good, `notEqual(200)` holds.
+
+Let me verify the `defaultCheckAi` return expression is sound.
+[tool] Reading index.mjs:54-65
+[tool] status: Completed
+That return expression is convoluted and buggy: operator precedence makes it `(r.status === 0 || r.status === null) ? (r.error == null) : false`. If `kiro-cli` is missing, spawnSync returns `r.status === null` and `r.error` set (ENOENT), so it correctly returns false. If present with exit 0, `r.error == null` → true. That's actually correct, but let me simplify it for clarity to avoid future confusion.
+[tool] Editing index.mjs
+[tool] status: Completed
+Now let me trace the concurrency test once more. The planner blocks on `gate`. Request 1 sets `busy=true` then awaits planner. Request 2 arrives while `busy` → 429. After `release()`, planner resolves, request 1 validates and responds 200, `finally` resets `busy`. Correct.
+
+One concern: the `req.on('close', onClose)` fires `controller.abort()` when the response finishes normally too (Node emits `close` on the request after response ends). But by then `busy` is already reset in `finally` and the response already sent, so abort is harmless. The `onClose` is removed in `finally` before that. Good.
+
+Let me verify the 499 abort status — `res.writeHead(499)` is a non-standard code but Node's http allows any integer 100–999, so it's fine.
+
+The implementation is complete. Since I only have read/write/glob/grep tools (no terminal), I cannot execute `node --test` myself — I verified the logic by tracing each test path against the code.
+
+Files created (all within my owned scope — `server/**`, `tests/server.test.mjs`, `tests/planner.test.mjs`):
+
+- `server/plan.mjs` — schema constants, `validateStory`, `validatePlan` (rejects bad values and extra/unsafe fields, canonical key order), robust `extractJsonObject` (fenced/plain/chatter, brace-balanced, string-aware), `buildPrompt` (story embedded as untrusted data), and `defaultPlanner` (spawns `kiro-cli` via arg array — never a shell — with 100s timeout, 256KB output cap, abort-on-disconnect, SIGKILL cleanup).
+- `server/index.mjs` — `createServer(options)` with injectable `planner`/`checkAi`/`projectRoot`; `/api/health`, `/api/plan`; single-flight busy lock (429), 12-entry recency cache with `cached` flag, same-origin localhost guard (Host/Origin/JSON content type), safe static serving of `../dist` with path-traversal protection, MIME types, SPA fallback; listens only when invoked directly with `PORT` override.
+- `tests/planner.test.mjs` — validation and JSON-extraction unit tests, no CLI/credits.
+- `tests/server.test.mjs` — HTTP tests on ephemeral ports with an injected fake planner: health, plan success, caching, concurrency 429, origin/content-type/body validation, invalid-plan rejection, traversal safety.
+
+Untouched: `package.json`, `src/**`, `.kiro/**`, and all other tests/config (parent-owned).
+
+Important tradeoffs and notes:
+- I could not run `node --test` — only read/write/glob/grep are available in this session. I traced each test against the code but did not execute it. Run `node --test tests/server.test.mjs tests/planner.test.mjs` to confirm.
+- Character limits use Unicode code-point counting (`[...str].length`), which is fair for CJK/emoji but still counts grapheme clusters like flag emoji as multiple; acceptable for these bounded copy fields.
+- The cache key is the exact trimmed story; near-duplicates still spend credits by design (avoids surprising reuse).
+- Health check runs `kiro-cli --version` with a 5s timeout on each `/api/health` call rather than caching the result — simple and always-fresh, at the cost of a cheap subprocess per health poll. No model call is made.
+- Client disconnect aborts via `AbortController`; the default planner kills the child with SIGKILL to guarantee the busy lock resets.
+- No personal story text is ever logged; only the direct-launch banner prints.
