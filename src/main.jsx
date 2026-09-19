@@ -10,6 +10,9 @@ import {readDraft,saveDraft} from './draft.js';
 import './production.css';
 import './style.css';
 
+const ONLINE_DEMO=import.meta.env.MODE==='demo';
+const LOCAL_DOWNLOAD='https://github.com/davidpengrj/memory-workshop/releases/tag/v2.1.0';
+
 function LayerArt({layer,all=false,design}){
   return <svg viewBox="-4 -4 208 208" aria-hidden="true">{all?[...design.layers].reverse().map(l=><path key={l.id} d={l.path} fill={l.color} fillRule="evenodd"/>):<path d={layer.path} fill={layer.id===0?'#d8bd98':layer.color} fillRule="evenodd"/>}</svg>;
 }
@@ -32,18 +35,19 @@ function App(){
   const [plan,setPlan]=useState(draft?.plan??presets[0].plan),[story,setStory]=useState(draft?.story??presets[0].story),[renderedStory,setRenderedStory]=useState(draft?.renderedStory??presets[0].story);
   const [sample,setSample]=useState(draft?null:'sea'),[source,setSource]=useState(draft?.source??'example'),[size,setSize]=useState(draft?.size??180),[material,setMaterial]=useState(draft?.material??'wood');
   const [exploded,setExploded]=useState(false),[lit,setLit]=useState(true),[activeLayer,setActiveLayer]=useState(null),[resetKey,setResetKey]=useState(0),[view,setView]=useState('scene');
-  const [busy,setBusy]=useState(false),[seconds,setSeconds]=useState(0),[error,setError]=useState(''),[status,setStatus]=useState('checking');
+  const [busy,setBusy]=useState(false),[seconds,setSeconds]=useState(0),[error,setError]=useState(''),[status,setStatus]=useState(ONLINE_DEMO?'demo':'checking');
   const [modal,setModal]=useState(null),[exporting,setExporting]=useState(false),[toast,setToast]=useState(''),[saved,setSaved]=useState(false),[hasSaved,setHasSaved]=useState(false);
   const requestRef=useRef(null),toastRef=useRef(null);
   const design=useMemo(()=>createDesign(plan,{size,material,reinforcement}),[plan,size,material,reinforcement]);
   const changed=story!==renderedStory;
   useEffect(()=>{try{setDraftSaved(saveDraft(localStorage,{plan,story,renderedStory,source,size,material,reinforcement}));}catch{setDraftSaved(false);}},[plan,story,renderedStory,source,size,material,reinforcement]);
-  useEffect(()=>{fetch('/api/health').then(r=>r.json()).then(d=>setStatus(d.aiAvailable?'ready':'unavailable')).catch(()=>setStatus('unavailable'));try{setHasSaved(Boolean(localStorage.getItem('memory-theatre-design')));}catch{}return()=>requestRef.current?.abort();},[]);
+  useEffect(()=>{if(!ONLINE_DEMO)fetch('/api/health').then(r=>r.json()).then(d=>setStatus(d.aiAvailable?'ready':'unavailable')).catch(()=>setStatus('unavailable'));try{setHasSaved(Boolean(localStorage.getItem('memory-theatre-design')));}catch{}return()=>requestRef.current?.abort();},[]);
   useEffect(()=>{if(!busy)return;setSeconds(0);const t=setInterval(()=>setSeconds(s=>s+1),1000);return()=>clearInterval(t);},[busy]);
   useEffect(()=>{setSaved(false);},[plan,size,material,reinforcement]);
   function notify(s){setToast(s);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(''),4000);}
   function choose(p){requestRef.current?.abort();setBusy(false);setPlan(p.plan);setReinforcement(0);setStory(p.story);setRenderedStory(p.story);setSample(p.id);setSource('example');setError('');setActiveLayer(null);setExploded(false);}
   async function generate(){
+    if(ONLINE_DEMO)return;
     if([...story.trim()].length<8){setError('多告诉我一点吧，至少写 8 个字。');return;}
     setError('');setBusy(true);setSample(null);
     const controller=new AbortController();requestRef.current=controller;
@@ -66,16 +70,16 @@ function App(){
       <div className="workspace">
         <aside className="composer" aria-label="创作设置">
           <div className="section-heading"><span className="step-number">01</span><h2>从一个故事开始</h2><Heart size={17}/></div>
-          <p className="helper">想留住谁，或哪一个瞬间？</p>
+          <p className="helper">{ONLINE_DEMO?'选择一个示例，体验从回忆到制作。':'想留住谁，或哪一个瞬间？'}</p>
           <div className="sample-list" aria-label="示例故事">{presets.map(p=>{const Icon=SampleIcons[p.icon];return <button key={p.id} disabled={busy} className={sample===p.id?'sample selected':'sample'} onClick={()=>choose(p)}><Icon size={16}/><span>{p.tag}</span><ChevronRight size={14}/></button>;})}</div>
-          <div className="story-field"><label htmlFor="story">我的回忆<span>{[...story].length} / 1200</span></label><textarea id="story" value={story} maxLength={1200} disabled={busy} onChange={e=>{setStory(e.target.value);setSample(null);setError('');}} placeholder="比如，那个和朋友在海边等日出的清晨……"/><div className="story-footer"><span><Sparkles size={12}/> 写具体一点，故事会更有温度</span></div></div>
+          <div className="story-field"><label htmlFor="story">{ONLINE_DEMO?'示例中的回忆':'我的回忆'}<span>{[...story].length} / 1200</span></label><textarea id="story" value={story} maxLength={1200} readOnly={ONLINE_DEMO} disabled={busy} onChange={e=>{setStory(e.target.value);setSample(null);setError('');}} placeholder="比如，那个和朋友在海边等日出的清晨……"/><div className="story-footer"><span><Sparkles size={12}/> {ONLINE_DEMO?'示例可切换，配色与尺寸可自由调整':'写具体一点，故事会更有温度'}</span></div></div>
           <div className="settings-divider"/>
           <div className="section-heading small"><span className="step-number">02</span><h2>让它更像你</h2></div>
           <div className="setting"><span className="field-label">配色心情 <span>上色参考</span></span><div className="palette-options">{Object.entries(palettes).map(([key,p])=><button key={key} className={`palette-choice ${plan.palette===key?'selected':''}`} onClick={()=>setPlan({...plan,palette:key})} aria-label={p.name} aria-pressed={plan.palette===key} title={p.name}><span className="color-strip">{p.colors.slice(1).map(c=><i key={c} style={{background:c}}/>)}</span>{plan.palette===key&&<Check size={11}/>}</button>)}</div><span className="current-palette">{design.colors.name}</span></div>
           <div className="paired-settings"><label className="setting">成品尺寸<select value={size} onChange={e=>setSize(+e.target.value)} aria-label="成品尺寸"><option value={140}>14 × 14 cm</option><option value={180}>18 × 18 cm</option><option value={220}>22 × 22 cm</option></select></label><label className="setting">制作材料<select value={material} onChange={e=>setMaterial(e.target.value)} aria-label="制作材料"><option value="wood">3 mm 椴木板</option><option value="card">1.5 mm 卡纸</option></select></label></div>
           {error&&<div className="error-message" role="alert"><AlertCircle size={16}/><span>{error}</span></div>}
-          <button className="primary-button generate" onClick={generate} disabled={busy||status!=='ready'}>{busy?<><LoaderCircle size={18} className="spin"/> 正在理解你的故事 · {seconds}s</>:<><Sparkles size={17}/> 把回忆变成光 <ArrowRight size={18}/></>}</button>
-          <p className="provider-note"><span className={`status-dot ${status==='ready'?'online':''}`}/>{status==='ready'?'AI 已就绪 · 生成使用你的 Kiro 额度':status==='checking'?'正在连接创作助手…':'AI 暂不可用 · 仍可体验示例与导出'}</p>
+          {ONLINE_DEMO?<button className="primary-button generate" onClick={()=>setTab('production')}><Scissors size={17}/> 用手边材料试着做 <ArrowRight size={18}/></button>:<button className="primary-button generate" onClick={generate} disabled={busy||status!=='ready'}>{busy?<><LoaderCircle size={18} className="spin"/> 正在理解你的故事 · {seconds}s</>:<><Sparkles size={17}/> 把回忆变成光 <ArrowRight size={18}/></>}</button>}
+          <p className="provider-note"><span className={`status-dot ${status==='ready'||ONLINE_DEMO?'online':''}`}/>{ONLINE_DEMO?<>在线示例版 · 自定义 AI 故事请使用<a href={LOCAL_DOWNLOAD} target="_blank" rel="noreferrer">本地版</a></>:status==='ready'?'AI 已就绪 · 生成使用你的 Kiro 额度':status==='checking'?'正在连接创作助手…':'AI 暂不可用 · 仍可体验示例与导出'}</p>
           {busy&&<button className="text-button cancel" onClick={()=>{requestRef.current?.abort();setBusy(false);}}>取消生成</button>}
         </aside>
         <section className="studio" aria-label="作品工作室">

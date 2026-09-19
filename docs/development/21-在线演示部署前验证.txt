@@ -1,0 +1,28 @@
+{
+  "url": "http://127.0.0.1:4181/memory-workshop/",
+  "status": "PASS",
+  "checked": [
+    "nested asset paths",
+    "clear demo label and read-only sample story",
+    "sample switch",
+    "3D layer interaction",
+    "inventory shortage to feasible plan",
+    "SVG/STL production download",
+    "batch size choice",
+    "refresh persistence",
+    "mobile overflow",
+    "no AI API requests",
+    "no page errors"
+  ]
+}
+Starting server 1/1: python3 -m http.server 4181 --bind 127.0.0.1 --directory work/deploy/site
+Waiting for server on port 4181...
+Server ready on port 4181
+
+All 1 server(s) ready
+Running: node work/deploy/smoke.mjs
+
+
+Stopping 1 server(s)...
+Server 1 stopped
+All servers stopped

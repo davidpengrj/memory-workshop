@@ -1,4 +1,5 @@
 node_modules/
+dist-demo/
 # dist is intentionally included for the hackathon's no-install local demo.
 .DS_Store
 *.log
