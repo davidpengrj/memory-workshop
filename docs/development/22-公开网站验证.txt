@@ -1,0 +1,17 @@
+{
+  "url": "https://davidpengrj.github.io/memory-workshop/",
+  "status": "PASS",
+  "checked": [
+    "nested asset paths",
+    "clear demo label and read-only sample story",
+    "sample switch",
+    "3D layer interaction",
+    "inventory shortage to feasible plan",
+    "SVG/STL production download",
+    "batch size choice",
+    "refresh persistence",
+    "mobile overflow",
+    "no AI API requests",
+    "no page errors"
+  ]
+}
